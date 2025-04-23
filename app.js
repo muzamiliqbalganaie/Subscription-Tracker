@@ -18,7 +18,7 @@ app.use(express.urlencoded({ extended: true })); // Parse URL-encoded requests
 app.use(cookieParser()); // Parse cookies from the request headers
 
 app.use('/api/v1/auth', authRouter);
-app.use('/api/v1/user', userRouter);
+app.use('/api/v1/users', userRouter);
 app.use('/api/v1/subscriptions', subscriptionRouter);
 
 
