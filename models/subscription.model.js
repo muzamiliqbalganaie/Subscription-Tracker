@@ -29,8 +29,13 @@ const subscriptionSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
+        required: true,
+        trim: true,
+    },
+    status: {
+        type: String,
         enum: ['active', 'cancelled', 'expired'],
-        default: 'active'
+        default: 'active',
     },
     startDate: {
         type: Date,
@@ -42,7 +47,6 @@ const subscriptionSchema = new mongoose.Schema({
     },
     renewalDate: {
         type: Date,
-        required: true,
         validate: {
             validator: function (value) {
                 return value > this.startDate;

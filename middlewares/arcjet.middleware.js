@@ -3,7 +3,7 @@ import aj from '../config/arcjet.js';
 const arcjetMiddleware = async (req, res, next) => {
     try {
         const decision = await aj.protect(req, { requested: 5 }); // Deduct 5 tokens from the bucket
-        console.log("Arcjet decision", decision);
+        // console.log("Arcjet Decision:", decision);
 
         if (decision.isDenied()) {
             if (decision.reason.isRateLimit())
@@ -12,10 +12,12 @@ const arcjetMiddleware = async (req, res, next) => {
                 return res.status(403).json({ error: "No bots allowed" });
             return res.status(403).json({ error: "Forbidden Access Denied" });
         }
+
+        next();
     } catch (error) {
-        console.log(`Arcjet middleware error", ${error}`)
+        console.error("Arcjet middleware error:", error);
         next(error);
     }
-}
+};
 
 export default arcjetMiddleware;
