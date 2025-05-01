@@ -1,11 +1,11 @@
-import dayjs from 'dayjs';
-import Subscription from '../models/subscription.model.js';
+import dayjs from 'dayjs'
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const { serve } = require('@upstash/workflow/express');
+const { serve } = require("@upstash/workflow/express");
+import Subscription from '../models/subscription.model.js';
+import { sendReminderEmail } from '../utils/send-email.js'
 
-const REMINDERS = [7, 5, 3, 1];
-
+const REMINDERS = [7, 5, 2, 1]
 
 export const sendReminders = serve(async (context) => {
     const { subscriptionId } = context.requestPayload;
@@ -16,7 +16,7 @@ export const sendReminders = serve(async (context) => {
     const renewalDate = dayjs(subscription.renewalDate);
 
     if (renewalDate.isBefore(dayjs())) {
-        context.log('Subscription is already expired or not active');
+        console.log(`Renewal date has passed for subscription ${subscriptionId}. Stopping workflow.`);
         return;
     }
 
@@ -27,34 +27,31 @@ export const sendReminders = serve(async (context) => {
             await sleepUntilReminder(context, `Reminder ${daysBefore} days before`, reminderDate);
         }
 
-        await triggerReminder(context, `Reminder  ${daysBefore} days before`)
+        if (dayjs().isSame(reminderDate, 'day')) {
+            await triggerReminder(context, `${daysBefore} days before reminder`, subscription);
+        }
     }
 });
 
 const fetchSubscription = async (context, subscriptionId) => {
-    if (!subscriptionId) {
-        throw new Error('Invalid subscriptionId');
-    }
-
     return await context.run('get subscription', async () => {
-        console.log('Fetching subscription with ID:', subscriptionId);
-        const subscription = await Subscription.findById(subscriptionId)
-            .populate('user', 'name email') // Populate user fields
-            .lean(); // Ensure the result is a plain JavaScript object
-        console.log('Fetched subscription:', subscription);
-        return subscription;
-    });
-};
+        return Subscription.findById(subscriptionId).populate('user', 'name email');
+    })
+}
 
 const sleepUntilReminder = async (context, label, date) => {
     console.log(`Sleeping until ${label} reminder at ${date}`);
     await context.sleepUntil(label, date.toDate());
 }
 
-
-const triggerReminder = async (context, label) => {
-    return await context.run(label, () => {
+const triggerReminder = async (context, label, subscription) => {
+    return await context.run(label, async () => {
         console.log(`Triggering ${label} reminder`);
-    })
-};
 
+        await sendReminderEmail({
+            to: subscription.user.email,
+            type: label,
+            subscription,
+        })
+    })
+}
